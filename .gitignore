@@ -1,0 +1,9 @@
+*.pyc
+*.bak
+*.sqlite
+venv/
+synapse/
+*.db
+*.zip
+pdf/
+png/
