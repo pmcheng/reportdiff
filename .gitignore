@@ -7,3 +7,4 @@ synapse/
 *.zip
 pdf/
 png/
+.Rhistory
