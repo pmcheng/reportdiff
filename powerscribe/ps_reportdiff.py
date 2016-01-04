@@ -1,6 +1,13 @@
+from __future__ import print_function
+import xml.etree.ElementTree as ET
+import powerscribe
+import sqlite3
+import diff_match_patch 
+import os,sys,getpass,base64,time,logging
+
 """Powerscribe ReportDiff
 
-Copyright 2015 Phillip Cheng, MD MS
+Copyright 2015-2016 Phillip Cheng, MD MS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,12 +21,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-import xml.etree.ElementTree as ET
-import powerscribe
-import sqlite3
-import diff_match_patch 
-import os,sys,getpass,base64,time,logging
 
 def create_sqlite_table(dbfile):
     conn=sqlite3.connect(dbfile)
@@ -57,8 +58,8 @@ def execute_sql(dbfile,query,params=None):
         else:
             c.execute(query,params)
         res=c.fetchall()
-    except sqlite3.OperationalError,e:
-        print e
+    except sqlite3.OperationalError as e:
+        print(e)
         res=None
     c.close()
     conn.commit()
@@ -66,7 +67,7 @@ def execute_sql(dbfile,query,params=None):
     return res
       
 def get_prelims(ps,dbfile):   
-    print "Checking prelims..."
+    print("Checking prelims...")
     result=ps.BrowseOrdersDV(period="PastWeek",orderStatus="Completed",reportStatus="PendingSignature")
     root=ET.fromstring(result)
     prelimset=root.findall('.//VExplorer')
@@ -86,7 +87,7 @@ def get_prelims(ps,dbfile):
         if len(check_prelim)>0 and prelim_timestamp==check_prelim[0][0]:
             continue
         
-        print "{0}/{1}: updating prelim {2}".format(total_prelims,len(prelimset),accession),
+        print("{0}/{1}: updating prelim {2}".format(total_prelims,len(prelimset),accession), end=' ')
         
         dictator_lastname=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:Dictator/b:Person/b:LastName')
         dictator_firstname=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:Dictator/b:Person/b:FirstName')
@@ -104,7 +105,7 @@ def get_prelims(ps,dbfile):
                             modality,resident,residentID,prelim,prelim_timestamp)
                         values (?,?,?,?,?,?,?,?,?,?)""",
                 (ps.site,accession,timestamp,proceduredescription,procedure_code,modality,dictator,dictatorID,prelim,prelim_timestamp))   
-        print
+        print()
 
 def get_finals(ps,dbfile):
     prelimset=execute_sql(dbfile,"select accession from study where final is NULL")
@@ -114,14 +115,14 @@ def get_finals(ps,dbfile):
         
         accession=row["accession"]
         total_prelims+=1
-        print "{0}/{1}: checking final {2}".format(total_prelims,len(prelimset),accession),
+        print("{0}/{1}: checking final {2}".format(total_prelims,len(prelimset),accession), end=' ')
         
         result=ps.SearchAccession(accession)
         root=ET.fromstring(result)
         reportID=powerscribe.get_xml(root,'.//ReportID')
         
         if reportID is None:
-            print "Missing reportID!"
+            print("Missing reportID!")
             execute_sql(dbfile,"""delete from study where accession=?""",(accession,))
             continue
             
@@ -131,7 +132,7 @@ def get_finals(ps,dbfile):
         reportStatus=powerscribe.get_xml(root,'.//b:OriginalReport/b:ReportStatus')
 
         if reportStatus=="Final":
-            print "... adding final report"
+            print("... adding final report")
             final=powerscribe.get_xml(root,'.//b:OriginalReport/b:ContentText')
             signer_lastname=powerscribe.get_xml(root,'.//b:Signer/b:Person/b:LastName')
             signer_firstname=powerscribe.get_xml(root,'.//b:OriginalReport/b:Signer/b:Person/b:FirstName')
@@ -141,8 +142,8 @@ def get_finals(ps,dbfile):
             execute_sql(dbfile,"""update study set attending=?, attendingID=?, final=?, final_timestamp=? where accession=?""",
                     (signer, signerID, final, final_timestamp, accession))
             total_finals+=1
-        print
-    print "Added {0}/{1} final reports".format(total_finals,total_prelims)
+        print()
+    print("Added {0}/{1} final reports".format(total_finals,total_prelims))
 
 def get_diffs(dbfile):
     dmp=diff_match_patch.diff_match_patch()
@@ -150,7 +151,7 @@ def get_diffs(dbfile):
     finalset=execute_sql(dbfile,"select * from study where final is not null and diff_score is null")
     for row in finalset:
         accession=row["accession"]
-        print "Diff for "+accession
+        print("Diff for "+accession)
         prelim=row["prelim"]
         final=row["final"]
         if prelim is not None and final is not None:
@@ -169,11 +170,16 @@ if __name__=='__main__':
     dbfile='reportdiff_ps.db'
     create_sqlite_table(dbfile)
     
+    try:
+        input = raw_input
+    except NameError:
+        pass
+    
     login=os.getenv("SYNLOGIN")
     if login is not None:
-        (username,pwd)=base64.b64decode(login).split("|")
+        (username,pwd)=base64.b64decode(login.encode('ascii')).decode('ascii').split("|")
     else:
-        username=raw_input("Username [%s]: " % getpass.getuser())
+        username=input("Username [%s]: " % getpass.getuser())
         pwd=getpass.getpass()
     
     while True:
@@ -186,8 +192,7 @@ if __name__=='__main__':
             logging.exception("Error!")
     
             
-        for i in xrange(300,0,-1):
-            print "Sleeping for %d seconds....\r" % i,
+        for i in range(300,0,-1):
+            print("Sleeping for %d seconds....\r" % i, end=' ')
             time.sleep(1)
-        print
-        
+        print()

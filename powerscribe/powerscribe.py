@@ -1,6 +1,15 @@
+from __future__ import print_function
+try:
+    from urllib.request import urlopen,Request
+except ImportError:
+    from urllib2 import urlopen,Request
+import xml.etree.ElementTree as ET
+import getpass
+import base64
+
 """Powerscribe Utility Methods
 
-Copyright 2015 Phillip Cheng, MD MS
+Copyright 2015-2016 Phillip Cheng, MD MS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,11 +23,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-import urllib2
-import xml.etree.ElementTree as ET
-import getpass
-import base64
 
 namespaces = {'b': 'http://schemas.datacontract.org/2004/07/Nuance.Radiology.Services.Contracts',
               'c': 'http://schemas.microsoft.com/2003/10/Serialization/Arrays',
@@ -70,8 +74,8 @@ class ps_session():
             
     def request(self, service, data):
         url=self.site+"/RAS/"+service
-        req=urllib2.Request(url,data,headers={'Content-type':'application/soap+xml'})
-        return urllib2.urlopen(req).read()
+        req=Request(url,data.encode('ascii'),headers={'Content-type':'application/soap+xml'})
+        return urlopen(req).read()
     
     
     def SearchAccession(self,accession):
@@ -145,21 +149,26 @@ class ps_session():
 
 if __name__=='__main__':
     site="https://keckpsweb.med.usc.edu"
-       
+
+    try:
+        input = raw_input
+    except NameError:
+        pass
+    
     login=os.getenv("SYNLOGIN")
     if login is not None:
-        (username,pwd)=base64.b64decode(login).split("|")
+        (username,pwd)=base64.b64decode(login.encode('ascii')).decode('ascii').split("|")
     else:
-        username=raw_input("Username [%s]: " % getpass.getuser())
+        username=input("Username [%s]: " % getpass.getuser())
         pwd=getpass.getpass()
 
     ps=ps_session(site,username,pwd)
     
     result=ps.GetAccountReportCount("SigningQueue")
-    print "SigningQueue: ",result
+    print("SigningQueue: ",result)
     
     result=ps.SearchAccession("330-CT-14-006404")
-    print "SearchAccession: ",result
+    print("SearchAccession: ",result)
 
     root=ET.fromstring(result)
     reportID=root.find('.//ReportID').text
@@ -168,13 +177,13 @@ if __name__=='__main__':
   
     root=ET.fromstring(result)
     content=root.find('.//b:ContentText',namespaces=namespaces).text
-    print "ReportContent: ",content
+    print("ReportContent: ",content)
        
     result=ps.GetAccountNames()
-    print result
+    print(result)
     
     (userid,username)=result[0]
-    print "GetAccount for "+username+": "+ps.GetAccount(userid)
+    print("GetAccount for "+username+": "+ps.GetAccount(userid))
     
     result=ps.BrowseOrdersDV(period="PastThreeDays",reportStatus="PendingSignature")
-    print result
+    print(result)

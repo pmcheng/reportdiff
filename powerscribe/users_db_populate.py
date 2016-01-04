@@ -1,9 +1,15 @@
+from __future__ import print_function
+import sqlite3
+import base64,powerscribe
+import xml.etree.ElementTree as ET
+import os
+
 """ReportDiff user database initialization and update
 
 Run this script to initialize and update the user database for ReportDiff Flask 
 server using data from a Powerscribe 360 server.
 
-Copyright 2015 Phillip Cheng, MD MS
+Copyright 2015-2016 Phillip Cheng, MD MS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,12 +23,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-
-import sqlite3
-import base64,powerscribe
-import xml.etree.ElementTree as ET
-import os
 
 def execute_sql(dbfile,query,params=None):
     """Execute SQL against a SQLite file
@@ -45,8 +45,8 @@ def execute_sql(dbfile,query,params=None):
         else:
             c.execute(query,params)
         res=c.fetchall()
-    except sqlite3.OperationalError,e:
-        print e
+    except sqlite3.OperationalError as e:
+        print(e)
         res=None
     c.close()
     conn.commit()
@@ -86,18 +86,23 @@ if __name__=='__main__':
         
     site="https://keckpsweb.med.usc.edu"
     
+    try:
+        input = raw_input
+    except NameError:
+        pass
+    
     login=os.getenv("SYNLOGIN")
     if login is not None:
-        (username,pwd)=base64.b64decode(login).split("|")
+        (username,pwd)=base64.b64decode(login.encode('ascii')).decode('ascii').split("|")
     else:
-        username=raw_input("Username [%s]: " % getpass.getuser())
+        username=input("Username [%s]: " % getpass.getuser())
         pwd=getpass.getpass()
     
     ps=powerscribe.ps_session(site,username,pwd)
     
     result=ps.GetAccountNames()
     for (ID,name) in result:
-        print ID,name
+        print(ID,name)
         result=ps.GetAccount(ID)
         root=ET.fromstring(result)
         username=powerscribe.get_xml(root,'.//b:UserName')
@@ -111,6 +116,6 @@ if __name__=='__main__':
         password="trojan"
         nickname=""
         if len(execute_sql(dbfile,"select * from users where username=?",(username,)))==0:
-            print "===> ",firstname,lastname
+            print("===> ",firstname,lastname)
             execute_sql(dbfile,"insert into users (username,role,password,firstname,lastname,nickname,ps_id) values (?,?,?,?,?,?,?)", (username,roleID,password,firstname,lastname,nickname,ID))
     
