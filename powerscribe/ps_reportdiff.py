@@ -1,10 +1,3 @@
-from __future__ import print_function
-import xml.etree.ElementTree as ET
-import powerscribe
-import sqlite3
-import diff_match_patch 
-import os,sys,getpass,base64,time,logging
-
 """Powerscribe ReportDiff
 
 Copyright 2015-2016 Phillip Cheng, MD MS
@@ -21,6 +14,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+from __future__ import print_function
+import xml.etree.ElementTree as ET
+import powerscribe
+import sqlite3
+import os,sys,getpass,base64,time,logging
+
+PY3=sys.version_info > (3,) 
+if PY3: 
+    import diff_match_patch3 as diff_match_patch
+else:
+    import diff_match_patch
 
 def create_sqlite_table(dbfile):
     conn=sqlite3.connect(dbfile)

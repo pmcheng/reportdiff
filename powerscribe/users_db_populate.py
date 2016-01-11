@@ -1,9 +1,3 @@
-from __future__ import print_function
-import sqlite3
-import base64,powerscribe
-import xml.etree.ElementTree as ET
-import os
-
 """ReportDiff user database initialization and update
 
 Run this script to initialize and update the user database for ReportDiff Flask 
@@ -23,6 +17,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+from __future__ import print_function
+import sqlite3
+import base64,powerscribe
+import xml.etree.ElementTree as ET
+import os
 
 def execute_sql(dbfile,query,params=None):
     """Execute SQL against a SQLite file

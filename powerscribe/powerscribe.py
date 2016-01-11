@@ -1,12 +1,3 @@
-from __future__ import print_function
-try:
-    from urllib.request import urlopen,Request
-except ImportError:
-    from urllib2 import urlopen,Request
-import xml.etree.ElementTree as ET
-import getpass
-import base64
-
 """Powerscribe Utility Methods
 
 Copyright 2015-2016 Phillip Cheng, MD MS
@@ -23,6 +14,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+from __future__ import print_function
+try:
+    from urllib.request import urlopen,Request
+except ImportError:
+    from urllib2 import urlopen,Request
+import xml.etree.ElementTree as ET
+import getpass
+import base64
 
 namespaces = {'b': 'http://schemas.datacontract.org/2004/07/Nuance.Radiology.Services.Contracts',
               'c': 'http://schemas.microsoft.com/2003/10/Serialization/Arrays',
