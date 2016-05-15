@@ -176,7 +176,7 @@ p=ggplot(adj_data,aes(x=rankscore,y=count))+
 ggsave ("pdf/Mean-centered diff percent vs Count.pdf",p,width=pw,height=ph)
 ggsave ("png/Mean-centered diff percent vs Count.png",p,width=pw,height=ph)
 
-time_data=study_data %>% filter(grad_date!="") %>% mutate(exp=(as.period(years(4)+ymd_hms(prelim_timestamp)-ymd(paste(grad_date,"-07-01")),units="months"))/months(1)) %>% filter(exp<48 & diff_score_percent<100)
+time_data=study_data %>% filter(grad_date!="") %>% mutate(exp=(as.period(years(4)+ymd_hms(prelim_timestamp)-ymd(paste(grad_date,"-07-01"),tz="UTC"),units="months"))/months(1)) %>% filter(exp<48 & diff_score_percent<100)
 
 p=ggplot(time_data,aes(exp,diff_score_percent)) +
   geom_point(aes(color=modality))+
