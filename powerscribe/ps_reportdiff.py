@@ -78,76 +78,81 @@ def get_prelims(ps,dbfile):
     prelimset=root.findall('.//VExplorer')
     total_prelims=0
     for elem in prelimset:
-        total_prelims+=1
-        if powerscribe.get_xml(elem,'.//DictatorLastName') is None: continue
-        accession=powerscribe.get_xml(elem,'.//Accession')
-        
-        reportID=powerscribe.get_xml(elem,'.//ReportID')
-        
-        result=ps.GetReportChain(reportID)
-        report_root=ET.fromstring(result)
-        
-        prelim_timestamp=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:LastDraftDate')
-        check_prelim=execute_sql(dbfile,"select prelim_timestamp from study where accession=?",(accession,))
-        if len(check_prelim)>0 and prelim_timestamp==check_prelim[0][0]:
-            continue
-        
-        print("{0}/{1}: updating prelim {2}".format(total_prelims,len(prelimset),accession), end=' ')
-        
-        dictator_lastname=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:Dictator/b:Person/b:LastName')
-        dictator_firstname=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:Dictator/b:Person/b:FirstName')
-        dictatorID=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:Dictator/b:AccountID')
-        dictator="{0} {1}".format(dictator_firstname,dictator_lastname)
-        prelim=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:ContentText')
-        modality=powerscribe.get_xml(report_root,'.//b:DiagnosticServSect')
-        proceduredescription=powerscribe.get_xml(report_root,'.//b:ProcedureDescList')
-        procedure_code=powerscribe.get_xml(report_root,'.//b:ProcedureCodeList')
-        timestamp=powerscribe.get_xml(report_root,'.//b:CompleteDate')
-        
-        
-        
-        execute_sql(dbfile,"""replace into study (site,accession,timestamp,proceduredescription,procedurecode,
-                            modality,resident,residentID,prelim,prelim_timestamp)
-                        values (?,?,?,?,?,?,?,?,?,?)""",
-                (ps.site,accession,timestamp,proceduredescription,procedure_code,modality,dictator,dictatorID,prelim,prelim_timestamp))   
-        print()
-
+        try:
+            total_prelims+=1
+            if powerscribe.get_xml(elem,'.//DictatorLastName') is None: continue
+            accession=powerscribe.get_xml(elem,'.//Accession')
+            
+            reportID=powerscribe.get_xml(elem,'.//ReportID')
+            
+            result=ps.GetReportChain(reportID)
+            report_root=ET.fromstring(result)
+            
+            prelim_timestamp=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:LastDraftDate')
+            check_prelim=execute_sql(dbfile,"select prelim_timestamp from study where accession=?",(accession,))
+            if len(check_prelim)>0 and prelim_timestamp==check_prelim[0][0]:
+                continue
+            
+            print("{0}/{1}: updating prelim {2}".format(total_prelims,len(prelimset),accession), end=' ')
+            
+            dictator_lastname=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:Dictator/b:Person/b:LastName')
+            dictator_firstname=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:Dictator/b:Person/b:FirstName')
+            dictatorID=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:Dictator/b:AccountID')
+            dictator="{0} {1}".format(dictator_firstname,dictator_lastname)
+            prelim=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:ContentText')
+            modality=powerscribe.get_xml(report_root,'.//b:DiagnosticServSect')
+            proceduredescription=powerscribe.get_xml(report_root,'.//b:ProcedureDescList')
+            procedure_code=powerscribe.get_xml(report_root,'.//b:ProcedureCodeList')
+            timestamp=powerscribe.get_xml(report_root,'.//b:CompleteDate')
+            
+            
+            
+            execute_sql(dbfile,"""replace into study (site,accession,timestamp,proceduredescription,procedurecode,
+                                modality,resident,residentID,prelim,prelim_timestamp)
+                            values (?,?,?,?,?,?,?,?,?,?)""",
+                    (ps.site,accession,timestamp,proceduredescription,procedure_code,modality,dictator,dictatorID,prelim,prelim_timestamp))   
+            print()
+        except:
+            logging.exception("Error!")
+            
 def get_finals(ps,dbfile):
     prelimset=execute_sql(dbfile,"select accession from study where final is NULL")
     total_finals=0
     total_prelims=0
     for row in prelimset:
-        
-        accession=row["accession"]
-        total_prelims+=1
-        print("{0}/{1}: checking final {2}".format(total_prelims,len(prelimset),accession), end=' ')
-        
-        result=ps.SearchAccession(accession)
-        root=ET.fromstring(result)
-        reportID=powerscribe.get_xml(root,'.//ReportID')
-        
-        if reportID is None:
-            print("Missing reportID!")
-            execute_sql(dbfile,"""delete from study where accession=?""",(accession,))
-            continue
+        try:
+            accession=row["accession"]
+            total_prelims+=1
+            print("{0}/{1}: checking final {2}".format(total_prelims,len(prelimset),accession), end=' ')
             
-        result=ps.GetReportChain(reportID)
-        root=ET.fromstring(result)
-        
-        reportStatus=powerscribe.get_xml(root,'.//b:OriginalReport/b:ReportStatus')
-
-        if reportStatus=="Final":
-            print("... adding final report")
-            final=powerscribe.get_xml(root,'.//b:OriginalReport/b:ContentText')
-            signer_lastname=powerscribe.get_xml(root,'.//b:Signer/b:Person/b:LastName')
-            signer_firstname=powerscribe.get_xml(root,'.//b:OriginalReport/b:Signer/b:Person/b:FirstName')
-            signerID=powerscribe.get_xml(root,'.//b:OriginalReport/b:Signer/b:AccountID')
-            signer="{0} {1}".format(signer_firstname,signer_lastname)
-            final_timestamp=powerscribe.get_xml(root,'.//b:OriginalReport/b:LastSignDate')
-            execute_sql(dbfile,"""update study set attending=?, attendingID=?, final=?, final_timestamp=? where accession=?""",
-                    (signer, signerID, final, final_timestamp, accession))
-            total_finals+=1
-        print()
+            result=ps.SearchAccession(accession)
+            root=ET.fromstring(result)
+            reportID=powerscribe.get_xml(root,'.//ReportID')
+            
+            if reportID is None:
+                print("Missing reportID!")
+                execute_sql(dbfile,"""delete from study where accession=?""",(accession,))
+                continue
+                
+            result=ps.GetReportChain(reportID)
+            root=ET.fromstring(result)
+            
+            reportStatus=powerscribe.get_xml(root,'.//b:OriginalReport/b:ReportStatus')
+    
+            if reportStatus=="Final":
+                print("... adding final report", end=' ')
+                final=powerscribe.get_xml(root,'.//b:OriginalReport/b:ContentText')
+                signer_lastname=powerscribe.get_xml(root,'.//b:Signer/b:Person/b:LastName')
+                signer_firstname=powerscribe.get_xml(root,'.//b:OriginalReport/b:Signer/b:Person/b:FirstName')
+                signerID=powerscribe.get_xml(root,'.//b:OriginalReport/b:Signer/b:AccountID')
+                signer="{0} {1}".format(signer_firstname,signer_lastname)
+                final_timestamp=powerscribe.get_xml(root,'.//b:OriginalReport/b:LastSignDate')
+                execute_sql(dbfile,"""update study set attending=?, attendingID=?, final=?, final_timestamp=? where accession=?""",
+                        (signer, signerID, final, final_timestamp, accession))
+                total_finals+=1
+            print()
+        except:
+            logging.exception("Error!")
     print("Added {0}/{1} final reports".format(total_finals,total_prelims))
 
 def get_diffs(dbfile):

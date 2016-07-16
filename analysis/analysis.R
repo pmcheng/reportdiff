@@ -106,7 +106,7 @@ p=heatmap.f(study_data,"All edits ordered by full name")
 p=heatmap.f(study_data,"All edits ordered by mean",sortbymean=TRUE)  
 p=heatmap.f(study_data,"All edits ordered by adjusted mean",sortbysd=TRUE)  
 
-for (yr in 2016:2019) {
+for (yr in 2017:2020) {
   my_subset=study_data%>% filter(grad_date==yr)
   if (nrow(my_subset)>1) {
     p=heatmap.f(my_subset,paste("Class of",yr,"edits ordered by full name"))
@@ -138,7 +138,7 @@ ggsave ("png/Edit Score by Modality.png",p,width=pw,height=ph)
 
 
 
-adj_data= study_data %>% filter(grad_date>=2015)%>% group_by(attending) %>% mutate(adjdiff=(diff_score_percent-mean(diff_score_percent)))
+adj_data= study_data %>% filter(grad_date>=2017)%>% group_by(attending) %>% mutate(adjdiff=(diff_score_percent-mean(diff_score_percent)))
 adj_data= adj_data %>% group_by(resident,grad_date) %>% summarize(count=n(),rankscore=mean(adjdiff))%>%ungroup()
 ordered_residents=as.vector(adj_data %>% arrange(desc(rankscore)))[["resident"]]
 adj_data$resident=factor(adj_data$resident,levels=ordered_residents)
