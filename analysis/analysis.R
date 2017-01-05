@@ -106,7 +106,26 @@ p=heatmap.f(study_data,"All edits ordered by full name")
 p=heatmap.f(study_data,"All edits ordered by mean",sortbymean=TRUE)  
 p=heatmap.f(study_data,"All edits ordered by adjusted mean",sortbysd=TRUE)  
 
-for (yr in 2017:2020) {
+# What we want are graduation years from the current academic year, plus the following 3 years (for all classes of a 4 year residency)
+# Academic year begins in July, so add 1 to startyear if current date is July or later
+year=as.integer(format(Sys.Date(), "%Y"))
+month=as.integer(format(Sys.Date(), "%m"))
+if (month>=7) {
+    startyear=year+1
+} else {
+    startyear=year
+}
+
+for (yr in startyear:(startyear+3)) {
+  my_subset=study_data%>% filter(grad_date==yr) %>% filter((today()-as.Date(prelim_timestamp))<=180)
+  if (nrow(my_subset)>1) {
+    p=heatmap.f(my_subset,paste("Class of",yr,"edits last 6 months ordered by full name"))
+    p=heatmap.f(my_subset,paste("Class of",yr,"edits last 6 months ordered by mean"),sortbymean=TRUE)  
+    p=heatmap.f(my_subset,paste("Class of",yr,"edits last 6 months ordered by adjusted mean"),sortbysd=TRUE)  
+  }
+}
+
+for (yr in startyear:(startyear+3)) {
   my_subset=study_data%>% filter(grad_date==yr)
   if (nrow(my_subset)>1) {
     p=heatmap.f(my_subset,paste("Class of",yr,"edits ordered by full name"))
@@ -138,7 +157,7 @@ ggsave ("png/Edit Score by Modality.png",p,width=pw,height=ph)
 
 
 
-adj_data= study_data %>% filter(grad_date>=2017)%>% group_by(attending) %>% mutate(adjdiff=(diff_score_percent-mean(diff_score_percent)))
+adj_data= study_data %>% filter(grad_date>=startyear)%>% group_by(attending) %>% mutate(adjdiff=(diff_score_percent-mean(diff_score_percent)))
 adj_data= adj_data %>% group_by(resident,grad_date) %>% summarize(count=n(),rankscore=mean(adjdiff))%>%ungroup()
 ordered_residents=as.vector(adj_data %>% arrange(desc(rankscore)))[["resident"]]
 adj_data$resident=factor(adj_data$resident,levels=ordered_residents)
