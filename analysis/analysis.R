@@ -2,11 +2,11 @@
 
 # generate plots and analysis for ReportDiff
 
-library(RSQLite)
+library(DBI)
 library(ggplot2)
 library(dplyr)
 library(lubridate)
-drv = dbDriver("SQLite")
+# drv = dbDriver("SQLite")
 
 
 pw=10
@@ -86,7 +86,7 @@ heatmap.f=function(study_data,plot_title,sortbymean=FALSE,sortbysd=FALSE) {
 }
 
 
-con = dbConnect(drv, path_reportdb)
+con = dbConnect(RSQLite::SQLite(), path_reportdb)
 
 dbGetQuery(con, paste("attach '",path_usersdb,"' as users",sep=''))
 
