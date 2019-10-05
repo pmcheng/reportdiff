@@ -1,6 +1,6 @@
 """Powerscribe Utility Methods
 
-Copyright 2015-2016 Phillip Cheng, MD MS
+Copyright 2015-2019 Phillip Cheng, MD MS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ class ps_session():
             password=getpass.getpass('Password:')
         service="session.svc"
         action="Authentication/SignIn"
-        params="""<healthSystemID>1</healthSystemID><accessCode i:nil="true" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"/><loginName>"""+username+"""</loginName><password>"""+password+"""</password><adminMode>false</adminMode><version>4.5.20.0</version><workstation></workstation>"""
+        params="""<healthSystemID>1</healthSystemID><accessCode i:nil="true" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"/><loginName>"""+username+"""</loginName><password>"""+password+"""</password><adminMode>false</adminMode><version>7.0.154.0</version><workstation></workstation>"""
         data=self.envelope(service,action,params)
         response=self.request(service,data)
         root=ET.fromstring(response)
@@ -65,7 +65,8 @@ class ps_session():
         session_string=""
         if self.session!="":
             session_string="""<AccountSession>"""+self.session+"""</AccountSession>"""
-        header="""<s:Header><a:Action s:mustUnderstand="1">Nuance/Radiology/Services/2010/01/"""+action+"""</a:Action>"""+session_string+"""<a:To s:mustUnderstand="1">https://keckpsweb.med.usc.edu/RAS/"""+service+"""</a:To></s:Header>"""
+        url=self.site+"/RAS/"+service
+        header="""<s:Header><a:Action s:mustUnderstand="1">Nuance/Radiology/Services/2010/01/"""+action+"""</a:Action>"""+session_string+"""<a:To s:mustUnderstand="1">"""+url+"""</a:To></s:Header>"""
     
         averb=action[action.rfind("/")+1:]
         body="""<s:Body><"""+averb+""" xmlns="Nuance/Radiology/Services/2010/01">"""+params+"""</"""+averb+"""></s:Body>"""
@@ -130,9 +131,9 @@ class ps_session():
         response=self.request(service,data)
         return response
     
-    def BrowseOrdersDV(self,period="PastWeek",orderStatus="All",reportStatus="All",accountID=0):
+    def BrowseOrdersDV(self,period="PastWeek",orderStatus="All",reportStatus="All",accountID=0, modality=0, anatomy=0, fromdate="0001-01-01T00:00:00",todate="0001-01-01T00:00:00"):
     
-        # period = PastHour PastFourHours Today Yesterday PastTwoDays PastThreeDays PastWeek PastTwoWeeks PastMonth Tomorrow AllFuture NoLimit
+        # period = PastHour PastFourHours Today Yesterday PastTwoDays PastThreeDays PastWeek PastTwoWeeks PastMonth Tomorrow AllFuture NoLimit Custom
         # orderStatus = All Scheduled Completed Temporary Cancelled DictatedExt Entered
         
         # reportStatus = All WetRead Draft PendingCorrection Corrected CorrectionRejected PendingSignature SignRejected Final NonFinal Addended Rejected Reported Unreported
@@ -140,15 +141,18 @@ class ps_session():
         # use NonFinal for Draft, PendingSignature
         # use PendingSignature for resident/fellow reports
 
+        # anatomy = 311 Abdomen & Pelvis, 316 chest
+        # modality = 22 CT, 220 MR, 24 US, 27 Fluoro, 21 Radiography
+
         service="explorer.svc"
         action="OrderExplorer/BrowseOrdersDV"
-        params="""<time xmlns:b="http://schemas.datacontract.org/2004/07/Nuance.Radiology.Services.Contracts" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"><b:From>0001-01-01T00:00:00</b:From><b:Period>"""+period+"""</b:Period><b:To>0001-01-01T00:00:00</b:To></time><orderStatus>"""+orderStatus+"""</orderStatus><reportStatus>"""+reportStatus+"""</reportStatus><accountID>"""+str(accountID)+"""</accountID>"""
+        params="""<time xmlns:b="http://schemas.datacontract.org/2004/07/Nuance.Radiology.Services.Contracts" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"><b:From>{0}</b:From><b:Period>{1}</b:Period><b:To>{2}</b:To></time><orderStatus>{3}</orderStatus><reportStatus>{4}</reportStatus><accountID>{5}</accountID><modality>{6}</modality><anatomy>{7}</anatomy>""".format(fromdate,period,todate,orderStatus,reportStatus,accountID,modality,anatomy)
         data=self.envelope(service,action,params)
         response=self.request(service,data)
         return response
 
 if __name__=='__main__':
-    site="https://keckpsweb.med.usc.edu"
+    site="http://calv-psapp"
 
     try:
         input = raw_input

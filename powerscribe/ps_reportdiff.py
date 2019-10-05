@@ -16,7 +16,8 @@ limitations under the License.
 """
 
 from __future__ import print_function
-import xml.etree.ElementTree as ET
+#import xml.etree.ElementTree as ET
+from lxml import etree as ET
 import powerscribe
 import sqlite3
 import os,sys,getpass,base64,time,logging
@@ -74,19 +75,20 @@ def execute_sql(dbfile,query,params=None):
 def get_prelims(ps,dbfile):   
     print("Checking prelims...")
     result=ps.BrowseOrdersDV(period="PastWeek",orderStatus="Completed",reportStatus="PendingSignature")
-    root=ET.fromstring(result)
+    root=ET.fromstring(result, parser=parser)
     prelimset=root.findall('.//VExplorer')
     total_prelims=0
     for elem in prelimset:
         try:
             total_prelims+=1
             if powerscribe.get_xml(elem,'.//DictatorLastName') is None: continue
+            if powerscribe.get_xml(elem,'.//IsAddendum')!="false": continue
             accession=powerscribe.get_xml(elem,'.//Accession')
             
             reportID=powerscribe.get_xml(elem,'.//ReportID')
             
             result=ps.GetReportChain(reportID)
-            report_root=ET.fromstring(result)
+            report_root=ET.fromstring(result, parser=parser)
             
             prelim_timestamp=powerscribe.get_xml(report_root,'.//b:OriginalReport/b:LastDraftDate')
             check_prelim=execute_sql(dbfile,"select prelim_timestamp from study where accession=?",(accession,))
@@ -126,7 +128,7 @@ def get_finals(ps,dbfile):
             print("{0}/{1}: checking final {2}".format(total_prelims,len(prelimset),accession), end=' ')
             
             result=ps.SearchAccession(accession)
-            root=ET.fromstring(result)
+            root=ET.fromstring(result, parser=parser)
             reportID=powerscribe.get_xml(root,'.//ReportID')
             
             if reportID is None:
@@ -135,7 +137,7 @@ def get_finals(ps,dbfile):
                 continue
                 
             result=ps.GetReportChain(reportID)
-            root=ET.fromstring(result)
+            root=ET.fromstring(result, parser=parser)
             
             reportStatus=powerscribe.get_xml(root,'.//b:OriginalReport/b:ReportStatus')
     
@@ -176,7 +178,7 @@ def get_diffs(dbfile):
                         (diffscore,diffpercent,accession))
 
 if __name__=='__main__':    
-    site="https://keckpsweb.med.usc.edu"
+    site="http://calv-psapp"
     dbfile='reportdiff_ps.db'
     create_sqlite_table(dbfile)
     
@@ -184,6 +186,8 @@ if __name__=='__main__':
         input = raw_input
     except NameError:
         pass
+    
+    parser = ET.XMLParser(recover=True)
     
     login=os.getenv("SYNLOGIN")
     if login is not None:
