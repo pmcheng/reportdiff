@@ -116,7 +116,7 @@ if (month>=7) {
     startyear=year
 }
 
-for (yr in startyear:(startyear+3)) {
+for (yr in startyear:(startyear+4)) {
   my_subset=study_data%>% filter(grad_date==yr) %>% filter((today()-as.Date(prelim_timestamp))<=180)
   if (nrow(my_subset)>1) {
     p=heatmap.f(my_subset,paste("Class of",yr,"edits last 6 months ordered by full name"))
@@ -125,7 +125,7 @@ for (yr in startyear:(startyear+3)) {
   }
 }
 
-for (yr in startyear:(startyear+3)) {
+for (yr in startyear:(startyear+4)) {
   my_subset=study_data%>% filter(grad_date==yr)
   if (nrow(my_subset)>1) {
     p=heatmap.f(my_subset,paste("Class of",yr,"edits ordered by full name"))
@@ -195,7 +195,7 @@ p=ggplot(adj_data,aes(x=rankscore,y=count))+
 ggsave ("pdf/Mean-centered diff percent vs Count.pdf",p,width=pw,height=ph)
 ggsave ("png/Mean-centered diff percent vs Count.png",p,width=pw,height=ph)
 
-time_data=study_data %>% filter(grad_date!="") %>% mutate(exp=(as.period(years(4)+ymd_hms(prelim_timestamp)-ymd(paste(grad_date,"-07-01"),tz="UTC"),units="months"))/months(1)) %>% filter(exp<48 & diff_score_percent<100)
+time_data=study_data %>% filter(grad_date!="") %>% mutate(exp=(as.period(years(4)+ymd_hms(prelim_timestamp)-ymd(paste(grad_date,"-07-01"),tz="UTC"),units="months"))/months(1)) %>% filter(exp<48 & exp>0 & diff_score_percent<100)
 
 p=ggplot(time_data,aes(exp,diff_score_percent)) +
   geom_point(aes(color=modality))+
