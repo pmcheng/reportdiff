@@ -8,6 +8,11 @@ library(dplyr)
 library(lubridate)
 # drv = dbDriver("SQLite")
 
+# Suppress summarise info
+options(dplyr.summarise.inform = FALSE)
+
+# Center titles
+theme_update(plot.title = element_text(hjust = 0.5))
 
 pw=10
 ph=7.5
@@ -88,9 +93,9 @@ heatmap.f=function(study_data,plot_title,sortbymean=FALSE,sortbysd=FALSE) {
 
 con = dbConnect(RSQLite::SQLite(), path_reportdb)
 
-dbGetQuery(con, paste("attach '",path_usersdb,"' as users",sep=''))
+dbExecute(con, paste("attach '",path_usersdb,"' as users",sep=''))
 
-study_data=dbGetQuery(con,"select proceduredescription, prelim_timestamp, modality, resident, attending, attendingID, diff_score, diff_score_percent, grad_date from study, users where diff_score is not NULL and residentID is not NULL and study.residentID=users.ps_id")
+study_data=dbGetQuery(con,"select proceduredescription, prelim_timestamp, modality, resident, attending, attendingID, diff_score, diff_score_percent, grad_date from study, users where diff_score is not NULL and residentID is not NULL and study.residentID=users.ps_id and prelim_timestamp>'2000'")
 
 dbDisconnect(con)
 
@@ -100,11 +105,6 @@ dbDisconnect(con)
 study_data$attending[study_data$attendingID=='395']="Kevin G. King"
 study_data$attending[study_data$attendingID=='553']="Kevin S. King"
 
-
-
-p=heatmap.f(study_data,"All edits ordered by full name")  
-p=heatmap.f(study_data,"All edits ordered by mean",sortbymean=TRUE)  
-p=heatmap.f(study_data,"All edits ordered by adjusted mean",sortbysd=TRUE)  
 
 # What we want are graduation years from the current academic year, plus the following 3 years (for all classes of a 4 year residency)
 # Academic year begins in July, so add 1 to startyear if current date is July or later
@@ -116,40 +116,60 @@ if (month>=7) {
     startyear=year
 }
 
+
+my_subset=study_data%>% filter(grad_date>=startyear)
+# p=heatmap.f(my_subset,"All edits ordered by full name")  
+# p=heatmap.f(my_subset,"All edits ordered by mean",sortbymean=TRUE)  
+p=heatmap.f(my_subset,"All edits ordered by adjusted mean",sortbysd=TRUE)  
+
+my_subset=study_data%>% filter(grad_date>=startyear) %>% filter((today()-as.Date(prelim_timestamp))<=365)
+p=heatmap.f(my_subset,"All edits last 12 months ordered by adjusted mean",sortbysd=TRUE)  
+
+
 for (yr in startyear:(startyear+4)) {
   my_subset=study_data%>% filter(grad_date==yr) %>% filter((today()-as.Date(prelim_timestamp))<=180)
   if (nrow(my_subset)>1) {
-    p=heatmap.f(my_subset,paste("Class of",yr,"edits last 6 months ordered by full name"))
-    p=heatmap.f(my_subset,paste("Class of",yr,"edits last 6 months ordered by mean"),sortbymean=TRUE)  
+    # p=heatmap.f(my_subset,paste("Class of",yr,"edits last 6 months ordered by full name"))
+    # p=heatmap.f(my_subset,paste("Class of",yr,"edits last 6 months ordered by mean"),sortbymean=TRUE)  
     p=heatmap.f(my_subset,paste("Class of",yr,"edits last 6 months ordered by adjusted mean"),sortbysd=TRUE)  
+  }
+}
+
+# 1 year lookback
+for (yr in startyear:(startyear+4)) {
+  my_subset=study_data%>% filter(grad_date==yr) %>% filter((today()-as.Date(prelim_timestamp))<=365)
+  if (nrow(my_subset)>1) {
+    # p=heatmap.f(my_subset,paste("Class of",yr,"edits last 12 months ordered by full name"))
+    # p=heatmap.f(my_subset,paste("Class of",yr,"edits last 12 months ordered by mean"),sortbymean=TRUE)  
+    p=heatmap.f(my_subset,paste("Class of",yr,"edits last 12 months ordered by adjusted mean"),sortbysd=TRUE)  
   }
 }
 
 for (yr in startyear:(startyear+4)) {
   my_subset=study_data%>% filter(grad_date==yr)
   if (nrow(my_subset)>1) {
-    p=heatmap.f(my_subset,paste("Class of",yr,"edits ordered by full name"))
-    p=heatmap.f(my_subset,paste("Class of",yr,"edits ordered by mean"),sortbymean=TRUE)  
+    # p=heatmap.f(my_subset,paste("Class of",yr,"edits ordered by full name"))
+    # p=heatmap.f(my_subset,paste("Class of",yr,"edits ordered by mean"),sortbymean=TRUE)  
     p=heatmap.f(my_subset,paste("Class of",yr,"edits ordered by adjusted mean"),sortbysd=TRUE)  
   }
 }
 
-my_subset=study_data%>% filter(modality=="CT")
-p=heatmap.f(my_subset,"CT edits ordered by mean",sortbymean=TRUE)  
+my_subset=study_data%>% filter(grad_date>=startyear) %>% filter(modality=="CT")
+# p=heatmap.f(my_subset,"CT edits ordered by mean",sortbymean=TRUE)  
 p=heatmap.f(my_subset,"CT edits ordered by adjusted mean",sortbysd=TRUE)  
 
-my_subset=study_data%>% filter(modality=="MR")
-p=heatmap.f(my_subset,"MR edits ordered by mean",sortbymean=TRUE)  
+my_subset=study_data%>% filter(grad_date>=startyear) %>% filter(modality=="MR")
+# p=heatmap.f(my_subset,"MR edits ordered by mean",sortbymean=TRUE)  
 p=heatmap.f(my_subset,"MR edits ordered by adjusted mean",sortbysd=TRUE)  
 
-my_subset=study_data%>% filter(modality=="US")
-p=heatmap.f(my_subset,"US edits ordered by mean",sortbymean=TRUE)  
+my_subset=study_data%>% filter(grad_date>=startyear) %>% filter(modality=="US")
+# p=heatmap.f(my_subset,"US edits ordered by mean",sortbymean=TRUE)  
 p=heatmap.f(my_subset,"US edits ordered by adjusted mean",sortbysd=TRUE)  
 
 
 my_subset=study_data #  %>% filter(grad_date>=2015) %>% filter(modality!="RA")   
 p=ggplot(my_subset,aes(x=modality,y=diff_score_percent))+
-  stat_summary(fun.y=mean,geom="bar")+
+  stat_summary(fun=mean,geom="bar")+
   ggtitle(sprintf("Edit score by modality %s to %s (n=%i)", substr(min(my_subset$prelim_timestamp),1,10),substr(max(my_subset$prelim_timestamp),1,10),nrow(my_subset)))+
   scale_y_continuous('Edit score %')
 ggsave ("pdf/Edit Score by Modality.pdf",p,width=pw,height=ph)
