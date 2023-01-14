@@ -115,7 +115,7 @@ if __name__=='__main__':
             roleID=0
         password="trojan"
         nickname=""
-        if len(execute_sql(dbfile,"select * from users where username=?",(username,)))==0:
+        if len(execute_sql(dbfile,"select * from users where ps_id=?",(ID,)))==0:
             print("===> ",firstname,lastname)
             execute_sql(dbfile,"insert into users (username,role,password,firstname,lastname,nickname,ps_id) values (?,?,?,?,?,?,?)", (username,roleID,password,firstname,lastname,nickname,ID))
     
